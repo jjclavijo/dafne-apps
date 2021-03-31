@@ -1,0 +1,55 @@
+version: "3"
+services:
+
+  db:
+    image: dafne-db:0.2
+#    build: ./db
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    networks:
+      - backend
+    ports:
+      - "127.0.0.1:5432:5432" # Expose port for Debug purposes
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "200k"
+        max-file: "10"
+    environment:
+      POSTGRES_PASSWORD: "docker"
+
+  interface:
+    image: dafne-df:0.3
+#    build: ./data_feeder
+    volumes:
+      - $DAFNE_HOME/data:/datos
+      - $DAFNE_HOME/sockets:/sockets
+    networks:
+      - backend
+    depends_on:
+      - db
+    links:
+      - db:database
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "200k"
+        max-file: "10"
+    environment:
+      SI_SOCKDIR: "/sockets/"
+      DATOS: "/datos/"
+      SI_HOST: "database"
+      SI_PORT: "5432"
+      SI_USER: "postgres"
+      SI_PASS: "docker"
+      SI_BASE: "sismoident"
+      LOCAL_USER_ID: "${LOCAL_USER_ID:-1000}"
+    command: dafne_dataserver --cache total --cache total_pos --cache pos10 --cache neg10 --cache pos08 --cache total_pos_n --cache test_tot
+
+networks:
+  backend:
+
+volumes:
+  db-data:
+  #sockets:
+  #data-files:

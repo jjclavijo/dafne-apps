@@ -1,0 +1,20 @@
+[build-system]
+requires = ["flit_core >=2,<3"]
+build-backend = "flit_core.buildapi"
+
+[tool.flit.metadata]
+module = "dafnecacher"
+author = "Javier J. Clavijo"
+author-email = "jclavijo@gmail.com"
+home-page = "https://jjclavijo.github.io/pydafne/"
+classifiers = ["License :: OSI Approved :: MIT License"]
+requires = [
+    "numpy",
+    "pyarrow",
+    "pandas",
+    "tensorflow"
+]
+requires-python=">=3.3"
+
+[tool.flit.scripts]
+dafne_build_cache = "dafnecacher:main"
