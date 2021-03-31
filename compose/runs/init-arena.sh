@@ -1,1 +1,0 @@
-docker run --rm -e LOCAL_USER_ID=1000 -v /home/javier/proy/dafne/docker/notebooks:/notebooks -v /home/javier/proy/dafne/docker/raw:/dafne_home -v /home/javier/proy/dafne/docker/models:/arena -p 8889:8888 dfarena

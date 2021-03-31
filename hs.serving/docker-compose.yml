@@ -2,7 +2,7 @@ version: "3"
 services:
 
   db:
-    image: dafne-db-times:latest
+    image: docker.io/jjclavijo/dafne-db:times-latest
 #    build: ./db
 #    volumes:
 #      - db-data:/var/lib/postgresql/data
@@ -29,7 +29,7 @@ services:
       - backend
     
   shower:
-    image: dafne-show:latest
+    image: dafne-apps:serving-latest
 #    build: ./data_feeder
     volumes:
       - $DAFNE_HOME/data/http-nevada:/opt/app/data
