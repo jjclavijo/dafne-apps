@@ -1,4 +1,4 @@
-FROM python:3.8-slim-buster AS compile-image
+FROM docker.io/python:3.8-slim-buster AS compile-image
 
 RUN apt-get update
 RUN apt-get install -y build-essential git
@@ -16,7 +16,7 @@ COPY Makefile .
 
 RUN make
 
-FROM tensorflow/tensorflow:2.3.1
+FROM docker.io/tensorflow/tensorflow:2.3.1
 
 # Install gosu
 COPY docker/install_scripts/* ./

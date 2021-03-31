@@ -1,4 +1,4 @@
-FROM python:3.8-slim-buster AS compile-image
+FROM docker.io/python:3.8-slim-buster AS compile-image
 
 RUN apt-get -y update && apt-get -y install make
 
@@ -19,7 +19,7 @@ COPY Makefile .
 #RUN git clone https://github.com/jjclavijo/dafnedset.git &&\
 RUN make
 
-FROM tensorflow/tensorflow:2.3.1
+FROM docker.io/tensorflow/tensorflow:2.3.1
 
 ENV DAFNE_HOME=/dafne_home
 

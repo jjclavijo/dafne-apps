@@ -1,0 +1,75 @@
+version: "3"
+services:
+
+  db:
+    image: docker.io/jjclavijo/dafne-db:dset-latest
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    networks:
+      - backend
+    ports:
+      - "127.0.0.1:5432:5432" # Expose port for Debug purposes
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "200k"
+        max-file: "10"
+    environment:
+      POSTGRES_PASSWORD: "docker"
+
+  interface:
+    image: docker.io/jjclavijo/dafne-apps:dset-latest
+#    build: ./data_feeder
+    volumes:
+      - $DAFNE_HOME/cache:/cache
+      - $DAFNE_HOME/sockets:/sockets
+    networks:
+      - backend
+    depends_on:
+      - db
+    links:
+      - db:database
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "200k"
+        max-file: "10"
+    environment:
+      SI_SOCKDIR: "/sockets/"
+      DATOS: "/datos/"
+      SI_HOST: "database"
+      SI_PORT: "5432"
+      SI_USER: "postgres"
+      SI_PASS: "docker"
+      SI_BASE: "sismoident"
+      LOCAL_USER_ID: "${LOCAL_USER_ID:-1000}"
+    command: dafne_dataserver 
+
+  cacher:
+    image: docker.io/jjclavijo/dafne-apps:cacher-latest
+#    build: ./data_feeder
+    volumes:
+      - $DAFNE_HOME/cache:/cache
+      - $DAFNE_HOME/sockets:/sockets
+    networks:
+      - backend
+    depends_on:
+      - interface
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "200k"
+        max-file: "10"
+    environment:
+      SI_SOCKDIR: "/sockets/"
+      DAFNE_HOME: "/"
+      LOCAL_USER_ID: "${LOCAL_USER_ID:-1000}"
+    command: dafne_build_cache 
+
+networks:
+  backend:
+
+volumes:
+  db-data:
+  sockets:
+  #data-files:

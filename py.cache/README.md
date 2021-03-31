@@ -5,8 +5,8 @@ part of my (Javier J. Clavijo) academic research.
 
 dafne stands for "Dispalcement As Features on Neural nEtworks".
 
-This app conects to the data-provider container, and caches the dataset into
-tensorflow objects.
+This app conects to the `dafne-db:py.dset` container, and caches the data
+slices into tensorflow objects.
 
 Hopely the rest of the research will be available soon-ish.
 
