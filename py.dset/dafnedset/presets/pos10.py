@@ -1,3 +1,11 @@
+"""
+A pre-set for positive samples
+
+- Query samples
+- split in Train, Test, Val, Show
+
+"""
+
 from ..datasets import DefaultQuerys
 
 raw = DefaultQuerys.positive().label(label=[1.,0.]).scale()

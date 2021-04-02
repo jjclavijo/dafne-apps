@@ -33,6 +33,13 @@ class BatchProcessing(object):
 
     @staticmethod
     def label_batch(rb,label,label_col_name='etiqueta'):
+        """
+        Label or re-label a record batch.
+
+        rb : pyArrow RecordBarch to label
+        label : New label to apply on all records
+        label_col_name : Name of the label field.
+        """
 
         many = rb.columns
         how_many = len(rb)
@@ -50,6 +57,14 @@ class BatchProcessing(object):
 
     @staticmethod
     def scale(batch):
+        """
+        Recenter RecordBatch around its mean level.
+
+        rb : pyArrow RecordBarch to label
+        label : New label to apply on all records
+        label_col_name : Name of the label field.
+        """
+
         df = batch.to_pandas()
         for i in ['este','norte','altura']:
             df.loc[:,i] = df.loc[:,i] - df[i].apply(np.nanmean)
@@ -60,6 +75,15 @@ class BatchProcessing(object):
 
     @staticmethod
     def random_mix(size,batch):
+        """
+        Random mix samples inside batch (NOT IN USE)
+
+        Resulting samples are random weighted averages of <size> samples
+        randomly taken from the batch.
+
+        size : number samples for each mix
+        batch : pyArroy Batch of samples to mix
+        """
 
         length = len(batch)
 
@@ -87,22 +111,24 @@ class BatchProcessing(object):
     @staticmethod
     def channel_mix_w_relabel(batch,times=1,p_true_pos=0.9,p_true_pos_ch=0.9,
                               label_col_name='etiqueta'):
-        # Given labeled batches (with labels t,f or [1,0],[0,1]
-        # Mixes the samples and create labels following this rules:
-        # A single positive sample is said to have P(truth=+ | lab=+) =
-        # p_true_pos. this accounts for misslabeling
+        """
+        Given labeled batches (with labels t,f or [1,0],[0,1]
+        Mixes the samples and create labels following this rules:
+        A single positive sample is said to have P(truth=+ | lab=+) =
+        p_true_pos. this accounts for misslabeling
 
-        # Since a single channel detection must be a whole sample detection,
-        # A single channel form a positive sample is said to hold
-        # P(channel_truth=+ | truth=+) = p_true_pos_ch.
-        # this accounts for channel oriented earthquakes.
+        Since a single channel detection must be a whole sample detection,
+        A single channel form a positive sample is said to hold
+        P(channel_truth=+ | truth=+) = p_true_pos_ch.
+        this accounts for channel oriented earthquakes.
 
-        # I.e. a single channel of a single sample has p_true_pos*p_true_pos_ch
-        # probability of haveing a detectable event.
+        I.e. a single channel of a single sample has p_true_pos*p_true_pos_ch
+        probability of haveing a detectable event.
 
-        # Nevative samples have P(truth = - | label= -) = 1.
-        # The underlaying asumtion is: the USGS catalog is up-tu-date and
-        # complete.
+        Negative samples have P(truth = - | label= -) = 1.
+        The underlaying asumtion is: the USGS catalog is up-tu-date and
+        complete.
+        """
 
         length = len(batch)
 
@@ -185,6 +211,10 @@ class BatchProcessing(object):
 
     @staticmethod
     def drop_epochs(batch,distribution=[]):
+        """
+        Randomly drops observations from each sample in the batch
+
+        """
         cols = ['este','norte','altura']
         length = len(batch)
 
@@ -224,6 +254,9 @@ class BatchProcessing(object):
 
     @staticmethod
     def random_rot_dir(batch):
+        """
+        Randomly horizontal axes reorientation for each sample.
+        """
         cols = ['este','norte']
         length = len(batch)
 
