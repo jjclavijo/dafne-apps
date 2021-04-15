@@ -19,3 +19,4 @@ requires-python=">=3.3"
 
 [tool.flit.scripts]
 dafne_dataserver = "dafnedset.serve:main"
+dafne_writeparquet = "dafnedset.parquet:save"

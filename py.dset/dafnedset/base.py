@@ -24,7 +24,7 @@ class BatchBuffer():
     def __init__(self,batch_size,*args,force=False,**kwargs):
         """
         batch_size: int or PromisedInt. cannot yield until set.
-        force: yield all when asked for next if data length is 
+        force: yield all when asked for next if data length is
                below batch_size
         """
         kwargs['force']=force
@@ -86,7 +86,7 @@ class BatchBuffer():
             if len(self.accum) != 0 and \
                len(self.accum[0]) >= self.batch_size:
                 this,*other = self.accum
-                
+
                 this_a,*this_b = (this.slice(0,self.batch_size),
                                  this.slice(self.batch_size))
 
@@ -95,7 +95,7 @@ class BatchBuffer():
 
                 return this_a, [*this_b, *other]
         except ValueError:
-            # ValueError will be raised if self.batch_size is 
+            # ValueError will be raised if self.batch_size is
             # not Set yet
             pass
 
@@ -132,7 +132,7 @@ class FeededBuffer(BatchBuffer):
         self.feeder = feeder
         self.count = 0
         self.max_length = max_length
-        
+
         if hasattr(feeder,'length'):
             self.length = feeder.length
         else:
@@ -170,12 +170,12 @@ class FeededBuffer(BatchBuffer):
                 #MODIF
                     batch = self.accum.pop()
                     self.count += len(batch)
-                    
+
                     if isinstance(self.length,PromisedInt):
                         self.length.set(self.count)
-                    
+
                     return batch
-                    
+
                 raise StopIteration
 
             return self.pull()
@@ -240,7 +240,7 @@ class MultiFeededBuffer(FeededBuffer):
 
         # Init simple Buffer
         super(FeededBuffer,self).__init__(batch_size,force=force)
-        
+
         # Save Callargs for __iter__
         kwargs['force']=force
         kwargs['repeat']=repeat
@@ -274,13 +274,13 @@ class MultiFeededBuffer(FeededBuffer):
 
 class SyncdBuffer(FeededBuffer):
     """
-    A Feeded Buffer whose feeder returns a list of batches instead of 
-    single batches. 
-    Each SyncdBuffer consumes only one position on the list, but can 
+    A Feeded Buffer whose feeder returns a list of batches instead of
+    single batches.
+    Each SyncdBuffer consumes only one position on the list, but can
     Sync with other sibling SyncdBuffers consuming the other positions.
     """
     def __init__(self,feeder,index,*args,force=True,max_length=None,**kwargs):
-        self.feeder = feeder 
+        self.feeder = feeder
 
         batch_size = kwargs.get('batch_size',feeder.length)
 
@@ -386,7 +386,7 @@ class Repeater(object):
             self.food = iter(self.feeder) # Me alimento.
         try:
             return next(self.food)
-            
+
         except StopIteration:
             self.reset = True
             raise StopIteration
@@ -404,7 +404,7 @@ class Repeater(object):
 
 class Cacher():
     def __init__(self,feeder,**kwargs):
-        
+
         self.feeder = feeder
         self.buffer = []
         self.exhausted = False
@@ -459,8 +459,8 @@ class Cacher():
 
     def __call__(self):
         return self
-        
-def yield_batched_query(q, query, query_size=QUERY_SIZE,
+
+def yield_batched_query(query, query_size=QUERY_SIZE,
                         conn=None, label=None,**kwargs):
     if conn is None:
         conn = default_conn()
@@ -469,7 +469,7 @@ def yield_batched_query(q, query, query_size=QUERY_SIZE,
         to_close=False
 
     with conn.cursor() as curs:
-        curs.execute(q)
+        curs.execute(query['size'])
         q1 = curs.fetchall()
         maxii = q1[0][0]
         log.info('query going to {}'.format(maxii))
@@ -477,13 +477,13 @@ def yield_batched_query(q, query, query_size=QUERY_SIZE,
 
         while top < maxii:
             top = top + query_size
-            curs.execute(query,vars=[top - query_size,top])
+            curs.execute(query['query'],vars=[top - query_size,top])
 
             many = curs.fetchall()
             how_many = len(many)
             if how_many > 0:
                 rb = pa.RecordBatch.from_arrays([*zip(*many)],
-                     names=['est','iid','ep','t','norte','este','altura'])
+                     names=query['columns'].split('\t'))
                 #TODO: Names as constant
                 yield rb
 
@@ -493,9 +493,9 @@ def yield_batched_query(q, query, query_size=QUERY_SIZE,
 class CachedLoader(Cacher):
 
     @classmethod
-    def read_db(cls,q,query,**kwargs):
+    def read_db(cls,query,**kwargs):
         gen = partial(yield_batched_query,
-                                q,query,**kwargs)
+                                query,**kwargs)
         return cls(FuncGen(gen),**kwargs)
 
     @classmethod
@@ -509,7 +509,7 @@ class CachedLoader(Cacher):
             parq = pq.ParquetFile(parquet_path)
             for i in range(parq.num_row_groups):
                 yield parq.read_row_group(i).to_batches()[0]
-            
+
         return cls(FuncGen(gen),**kwargs)
 
 class CachedSaver(Cacher):
@@ -531,9 +531,9 @@ class CachedSaver(Cacher):
 class Loader(Repeater):
 
     @classmethod
-    def read_db(cls,q,query,**kwargs):
+    def read_db(cls,query,**kwargs):
         gen = partial(yield_batched_query,
-                                q,query,**kwargs)
+                                query,**kwargs)
         return cls(FuncGen(gen),**kwargs)
 
     @classmethod
@@ -547,7 +547,7 @@ class Loader(Repeater):
             parq = pq.ParquetFile(parquet_path)
             for i in range(parq.num_row_groups):
                 yield parq.read_row_group(i).to_batches()[0]
-            
+
         return cls(FuncGen(gen),**kwargs)
 
 class Saver(Repeater):
