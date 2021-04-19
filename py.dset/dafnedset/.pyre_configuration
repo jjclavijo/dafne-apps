@@ -1,0 +1,10 @@
+{
+  "source_directories": [
+    "."
+  ],
+  "search_path": [
+    "../stubs",
+    "/home/javier/proy/dafne/apps/py.dset/venv/lib/python3.9/site-packages"
+  ],
+  "taint_models_path": "/home/javier/proy/dafne/apps/py.dset/venv/lib"
+}

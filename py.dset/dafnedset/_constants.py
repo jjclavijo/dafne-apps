@@ -25,6 +25,6 @@ MAX_BATCHSIZE=20000
 BATCH_SIZE=500
 
 #For Save_dataset
-SOCKET_DIR = os.environ.get('SI_SOCKDIR',ENV_DEFAULTS.get('SI_SOCKDIR'))
+SOCKET_DIR = os.environ.get('SI_SOCKDIR',ENV_DEFAULTS.get('SI_SOCKDIR',''))
 SOCKET_FILE = os.path.join(SOCKET_DIR,'sidb_cmd')
 

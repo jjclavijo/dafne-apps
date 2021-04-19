@@ -20,7 +20,7 @@ ENV_DEFAULTS= { 'DATOS':'/datos', 'SI_BASE':'sismoident','SI_USER':'postgres',
                 'SI_HOST':'localhost','SI_PORT':'5432','SI_PASS':'docker',
                 'PGPASSFILE':'/.pgpass','SI_SOCKDIR':'/sockets/'}
 
-SOCKET_DIR = os.environ.get('SI_SOCKDIR',ENV_DEFAULTS.get('SI_SOCKDIR'))
+SOCKET_DIR = os.environ.get('SI_SOCKDIR',ENV_DEFAULTS.get('SI_SOCKDIR',''))
 
 CMD_SOCKET = os.path.join(SOCKET_DIR,'sidb_cmd')
 

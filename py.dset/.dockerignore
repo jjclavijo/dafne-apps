@@ -1,0 +1,7 @@
+dafnedset/.pyre
+venv
+stubs
+dafnedset/.pyre_configuration
+dafnedset/.watchmanconfig
+
+__pycache__

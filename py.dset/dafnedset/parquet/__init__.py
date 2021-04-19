@@ -15,7 +15,7 @@ from ..base import Saver
 def save(name: str,output: str) -> bool:
     try:
         dset = import_module('.{}'.format(name),'dafnedset.presets')
-        data = dset.data
+        data = dset.__dict__['data']
     except ModuleNotFoundError:
         psets = import_module('.presets','dafnedset')
         data = psets.__dict__[name]

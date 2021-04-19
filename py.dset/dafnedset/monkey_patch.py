@@ -4,6 +4,9 @@ adding methods for easy representation of transformations as
 data.transform().etc...
 """
 
+from typing import Tuple
+classes_to_patch: Tuple
+
 from .base import BatchBuffer,FeededBuffer,MultiFeededBuffer,SyncdBuffer,\
                    Repeater,Cacher,CachedLoader,Loader
 
@@ -11,9 +14,10 @@ from .datasets import DefaultQuerys
 
 from .tools import toolify as add_tools
 
-classes_to_patch = BatchBuffer,FeededBuffer,MultiFeededBuffer,SyncdBuffer,\
+
+classes_to_patch = (BatchBuffer,FeededBuffer,MultiFeededBuffer,SyncdBuffer,\
                    Repeater,Cacher,CachedLoader,Loader,\
-                   DefaultQuerys,\
+                   DefaultQuerys)
 
 def patch_toolify(classes=classes_to_patch):
     for cls in classes:
@@ -44,10 +48,10 @@ from .datasets import DefaultQuerys
 from .extensions import PromisedInt,PromisedResult,Container
 #from .extensions.patch import contained as patch_contained
 
-classes_to_patch = BatchBuffer,FeededBuffer,MultiFeededBuffer,SyncdBuffer,\
+classes_to_patch = (BatchBuffer,FeededBuffer,MultiFeededBuffer,SyncdBuffer,\
                    Repeater,Cacher,CachedSaver,CachedLoader,Loader,Saver,\
                    DefaultQuerys,\
-                   PromisedInt,PromisedResult
+                   PromisedInt,PromisedResult)
 
 def patch_contain(classes=classes_to_patch):
     for cls in classes:
