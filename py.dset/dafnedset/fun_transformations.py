@@ -28,7 +28,9 @@ log = logging.getLogger(__name__)
 
 ### Decorator
 from typing import Callable, TypeVar, List, Union, NewType, Any
+from pyre_extensions import ListVariadic
 
+#Ts = TypeVar("Ts")
 RecordBatch = pa.lib.RecordBatch
 
 #TReturn = TypeVar("TReturn")
@@ -37,23 +39,27 @@ RecordBatch = pa.lib.RecordBatch
 
 def apply_pd_args(
         f: Callable[[pd.DataFrame,...], pd.DataFrame]
-      ) -> Callable[[RecordBatch], RecordBatch]:
-    def inner(*args: ...):
+      ) -> Callable[[...], Callable[[RecordBatch], RecordBatch]]:
+    def inner(*args: ...) -> Callable[[RecordBatch], RecordBatch]:
 
         def innner( batch: RecordBatch ) -> RecordBatch:
             pdbatch = batch.to_pandas()
             transformed = f(pdbatch, *args)
             return pa.RecordBatch.from_pandas(transformed, preserve_index=False)
 
+        return innner
+
     return inner
 
 def apply_args(
         f: Callable[[RecordBatch,...], RecordBatch]
-      ) -> Callable[[RecordBatch], RecordBatch]:
-    def inner(*args: ...):
+      ) -> Callable[[...], Callable[[RecordBatch], RecordBatch]]:
+    def inner(*args: ...) -> Callable[[RecordBatch], RecordBatch]:
 
         def innner( batch: RecordBatch ) -> RecordBatch:
             return f(batch, *args)
+
+        return innner
 
     return inner
 
