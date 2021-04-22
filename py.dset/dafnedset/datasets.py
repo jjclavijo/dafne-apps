@@ -82,23 +82,32 @@ class DefaultQuerys(CachedSaver,CachedLoader):
     def write_parquet(self):
         pass
 
-def synth_yielder(generator,size,batch):
-    def genbatch(length):
+from typing import Callable,List,Tuple, Generator, Iterable
+
+def synth_yielder(generator: Callable[[],Tuple[List[float],List[float],List[float]]] ,
+        size: int,
+        batch: int) -> Generator[pa.RecordBatch,None,None]:
+
+    def genbatch(length: int) -> pa.RecordBatch:
+        este: List[List[float]] = []
+        norte: List[List[float]] = []
+        altura: List[List[float]] = []
+        e: Iterable[float]
+        n: Iterable[float]
+        u: Iterable[float]
+
         for i in range(length):
             e,n,u = generator()
             este.append(list(e))
             norte.append(list(n))
             altura.append(list(u))
 
-        batch = pa.RecordBatch.from_arrays([este,norte,altura],
+        rbatch = pa.RecordBatch.from_arrays([este,norte,altura],
                                            names=['este','norte','altura'])
-        return batch
+        return rbatch
 
-    cumsize=0
-    este = []
-    norte = []
-    altura = []
-    while cumsize < size - batch:
+    cumsize: int = 0
+    while cumsize < (size - batch):
         yield genbatch(batch)
         cumsize += batch
 
