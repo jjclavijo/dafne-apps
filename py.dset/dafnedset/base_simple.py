@@ -99,6 +99,111 @@ def _(first: pa.RecordBatch, *rest: List[pa.RecordBatch],
 
     return first_a, [*first_b, *rest]
 
+class FunBufferOptions:
+    force: bool
+    max_length: Optional[bool]
+    niters: Optional[int]
+    batch_size: Optional[int]
+    columns: Optional[List[str]]
+    cache: bool
+
+
+class FunBuffer:
+    buffer: List[Feedable]
+    cache: List[Feedable]
+    streams: List[Callable[[],Feedable]]
+    iteration: List[int]
+    providers: List[Optional[Iterable[Feedable]]]
+    options: FunBufferOptions
+    preprocess: Callable[[pa.RecordBatch],pa.RecordBatch]
+    exhausted: bool
+    def get_new_next(self) -> Callable[[],pa.RecordBatch]:
+        pass
+
+    def fill_streams(self):
+        new_streams = fill_streams(self)
+        for n,stream in enumerate(new_streams):
+            if stream is None:
+                continue
+            else:
+                self.streams[n] = stream
+                self.iteration[n] += 1
+
+    def fill_buffer(self) -> int:
+        stopcount = 0
+        for f in self.streams:
+            try:
+                piece = f()
+                #TODO: validate
+                self.buffer.append(piece)
+            except StopIteration:
+                stopcount += 1
+        return stopcount
+
+    def advance(self, **kwargs) -> Optional[pa.RecordBatch]:
+        size = kwargs.get('size',self.options.batch_size)
+
+        batch, buff = advance(self,size)
+
+        if batch is None: # If buffer was not enough
+            stopcount = self.fill_buffer()
+            # si no había nada en el buffer y se terminó la iteración
+            if buff == [] and stopcount == len(self.streams):
+                self.fill_streams()
+                stopcount = self.fill_buffer()
+
+                if stopcount = len(self.streams):
+                    self.exhausted = True
+
+            # Try Again, this time if buffer was not enough but
+            # providers were exhausted, will return the last remaining
+            # elements
+            batch, buff = advance(self,size)
+
+        self.buffer = buff
+
+        if self.options.cache:
+            self.cache.append(batch)
+
+        return batch
+
+
+def advance(buffer: FunBuffer, size: Optional[int] = None, cache: bool= True)
+-> Tuple[Optional[pa.RecordBatch], List[pa.RecordBatch]]:
+
+    buf_len: int = sum([len(i) for i in buffer.buffer])
+
+    # Si el buffer está vacio:
+    if buf_len == 0:
+        return None,[]
+
+    if buf_len < size and not buffer.exhausted:
+        return None,buffer.buffer
+
+    new = buffer.buffer.copy() #not optimal.
+    new = field_normalize(*new, columns=buffer.options.columns)
+    new = join_batches(*new, until=size)
+
+    batch, new = get_batch(*new,length=size)
+
+    return batch, new
+
+def fill_streams(buffer: FunBuffer) -> List[Optional[Callable[[],pa.RecordBatch]]]:
+
+    status = [i < buffer.options.niter for i in buffer.iteration]
+    new_streams = [None] * len(buffer.streams)
+
+    for n, (status, source) in enumerate(zip(status,buffer.providers)):
+        if status:
+            if isinstance(source,FunBuffer):
+                new_streams[n] = source.get_new_next()
+            else:
+                new_streams[n] = source.__iter__().__next__
+
+    return new_streams
+
+
+
 class Buffer:
 
     force: bool
