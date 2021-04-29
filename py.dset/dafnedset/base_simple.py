@@ -1,8 +1,13 @@
 from functools import singledispatch, singledispatchmethod
 from collections.abc import Iterable
 
-Feedable = Union[pa.RecordBatch,pd.DataFrame,pd.Series,np.ndArray]
+from typing import Union,List,Iterable,Set,Optional,Tuple,Callable,NoReturn
 
+import pyarrow as pa
+import pandas as pd
+import numpy as np
+
+Feedable = Union[pa.RecordBatch,pd.DataFrame,pd.Series,np.ndarray]
 
 def pa_common_cols(batches: List[pa.RecordBatch]) -> Set[str]:
     if len(batches) > 1:
@@ -100,27 +105,70 @@ def _(first: pa.RecordBatch, *rest: List[pa.RecordBatch],
     return first_a, [*first_b, *rest]
 
 class FunBufferOptions:
-    force: bool
-    max_length: Optional[bool]
-    niters: Optional[int]
-    batch_size: Optional[int]
-    columns: Optional[List[str]]
-    cache: bool
+    force: bool = True
+    max_length: Optional[bool] = None
+    niter: Optional[int] = None
+    batch_size: Optional[int] = None
+    columns: Optional[List[str]] = None
+    cache: bool = True
+    def __init__(self,**kwargs) -> None:
+        """
+        init just updates class __dict__, making class initialization
+        similar to a struct type or something.
+        """
+        for i,j in kwargs.items():
+            if not i in self.__annotations__:
+                raise ValueError("Unknown keyboard parameter: {}".format(i))
+        self.__dict__.update(kwargs)
+        pass
 
+def stop() -> NoReturn:
+    raise StopIteration
 
 class FunBuffer:
     buffer: List[Feedable]
     cache: List[Feedable]
     streams: List[Callable[[],Feedable]]
+    stream_last_valid: List[bool]
     iteration: List[int]
     providers: List[Optional[Iterable[Feedable]]]
     options: FunBufferOptions
     preprocess: Callable[[pa.RecordBatch],pa.RecordBatch]
     exhausted: bool
+    def __init__(self,**kwargs) -> None:
+        """
+        Basic init stores all kw argumens into object dict (like a struct)
+        Then, check mandatory conditions and set needed parameters to defaults
+        """
+        for i,j in kwargs.items():
+            if not i in self.__annotations__:
+                raise ValueError("Unknown keyboard parameter: {}".format(i))
+        self.__dict__.update(kwargs)
+
+        if not "providers" in self.__dict__: self.streams = []
+
+        size = len(self.providers)
+
+        if not "streams" in self.__dict__: self.streams = [stop] * size
+        else:
+            if len(self.streams) != size:
+                raise ValueError("streams of unmatching length")
+        if not "iteration" in self.__dict__: self.iteration = [0] * size
+        else:
+            if len(self.iteration) != size:
+                raise ValueError("iteration counter of unmatching length")
+        if not "stream_last_valid" in self.__dict__:
+            self.stream_last_valid = [False] * size
+        else:
+            if len(self.stream_last_valid) != size:
+                raise ValueError("stream_last_valid of unmatching length")
+
+        pass
+
     def get_new_next(self) -> Callable[[],pa.RecordBatch]:
         pass
 
-    def fill_streams(self):
+    def fill_streams(self) -> None:
         new_streams = fill_streams(self)
         for n,stream in enumerate(new_streams):
             if stream is None:
@@ -131,14 +179,16 @@ class FunBuffer:
 
     def fill_buffer(self) -> int:
         stopcount = 0
-        for f in self.streams:
+        for ix,f in enumerate(self.streams):
             try:
                 piece = f()
                 #TODO: validate
                 self.buffer.append(piece)
             except StopIteration:
                 stopcount += 1
-        return stopcount
+                self.stream_last_valid[ix] = False #TODO: decorate streams
+                                                   # also check types
+        return stopcount #TODO: StopCount is redundant
 
     def advance(self, **kwargs) -> Optional[pa.RecordBatch]:
         size = kwargs.get('size',self.options.batch_size)
@@ -152,7 +202,7 @@ class FunBuffer:
                 self.fill_streams()
                 stopcount = self.fill_buffer()
 
-                if stopcount = len(self.streams):
+                if stopcount == len(self.streams):
                     self.exhausted = True
 
             # Try Again, this time if buffer was not enough but
@@ -168,8 +218,8 @@ class FunBuffer:
         return batch
 
 
-def advance(buffer: FunBuffer, size: Optional[int] = None, cache: bool= True)
--> Tuple[Optional[pa.RecordBatch], List[pa.RecordBatch]]:
+def advance(buffer: FunBuffer, size: Optional[int] = None, cache: bool= True)\
+    -> Tuple[Optional[pa.RecordBatch], List[pa.RecordBatch]]:
 
     buf_len: int = sum([len(i) for i in buffer.buffer])
 
@@ -190,10 +240,16 @@ def advance(buffer: FunBuffer, size: Optional[int] = None, cache: bool= True)
 
 def fill_streams(buffer: FunBuffer) -> List[Optional[Callable[[],pa.RecordBatch]]]:
 
-    status = [i < buffer.options.niter for i in buffer.iteration]
-    new_streams = [None] * len(buffer.streams)
+    can_reset: bool = [i < buffer.options.niter for i in buffer.iteration]
+    last_was_valid = buffer.stream_last_valid
+    size = len(buffer.streams)
+    providers = buffer.providers
 
-    for n, (status, source) in enumerate(zip(status,buffer.providers)):
+    status: bool = [i and not j for i,j in zip(can_reset,last_was_valid)]
+
+    new_streams = [None] * size
+
+    for n, (status, source) in enumerate(zip(status,providers)):
         if status:
             if isinstance(source,FunBuffer):
                 new_streams[n] = source.get_new_next()
@@ -201,105 +257,3 @@ def fill_streams(buffer: FunBuffer) -> List[Optional[Callable[[],pa.RecordBatch]
                 new_streams[n] = source.__iter__().__next__
 
     return new_streams
-
-
-
-class Buffer:
-
-    force: bool
-    callargs: Tuple[List[Any],Dict[str,Any]]
-    batch_size: Optional[int]
-    accum: List[Feedable]
-    columns_must: List[str]
-    feed_parms: Optional[Dict[str,Any]]
-    feeder: Optional[Union[Iterable[Feedable],List[Iterable[Feedable]]]]
-    length: Union[PromisedInt,int]
-    max_length: Optional[int]
-    count: int
-    is_multy: bool
-
-    @singledispatchmethod
-    def __init__(self,*args,**kwargs):
-        """
-        batch_size: int or PromisedInt. cannot yield until set.
-        force: yield all when asked for next if data length is
-               below batch_size
-
-        kwargs
-        """
-        try:
-            bs,*_ = args
-            if isinstance(bs,int) or isinstance(bs,PromisedInt):
-                self.batch_size = bs
-            elif: bs is None:
-                self.batch_size = bs
-            else:
-                raise TypeError('batch size must be integer')
-        except ValueError:
-            self.batch_size = None
-
-
-        self.force = kwargs.get('force',True)
-        self.callargs = (args,kwargs)
-        self.accum = []
-        self.is_multy = False
-
-    @__init__.register
-    #def __init__(self,feeder,batch_size,*args,force=False,
-    #             repeat=False,max_length=None,**kwargs):
-    def __init__(self,feeder: Iterable,*args,**kwargs):
-        """
-        feeder: any iterable.
-        batch_size: int or PromisedInt
-        max_length: int or PromisedInt limit before reset feeder.
-        """
-        self.feeder = feeder
-
-        if hasattr(feeder,'length'):
-            self.length = feeder.length
-        else:
-            self.length = PromisedInt()
-
-        if args == []: #if no Batch Size, lenght = Batch Size
-            args = [self.length]
-
-        self.__init__(*args,**kwargs)
-
-        self.repeat = kwargs.get('repeat',False)
-        self.max_length = kwargs.get('max_length',None)
-        self.count = 0
-
-        self.callargs = ([feeder,*args],kwargs)
-
-    @__init__.register
-    def __init__(self,feeder: list,*args,**kwargs):
-        self.callargs = ([feeder,*args],kwargs)
-
-        self.feeder = feeder
-
-        try:
-            batch_size = sum([i.batch_size for i in feeder])
-        except AttributeError:
-            batch_size = None #???
-
-        has_len = [hasattr(f,'length') for f in feeder]
-
-        if all(has_len):
-            self.length = sum([f.length for f in feeder])
-        else:
-            self.length = PromisedInt()
-
-        if args == []: #if no Batch Size, lenght = Batch Size
-            if batch_size = None:
-                args = [self.length]
-            else:
-                args = [batch_size]
-
-        self.__init__(*args,**kwargs)
-
-        self.repeat = kwargs.get('repeat',False)
-        self.max_length = kwargs.get('max_length',None)
-        self.count = 0
-        self.is_multy = True
-
-
