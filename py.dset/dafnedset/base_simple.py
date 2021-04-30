@@ -43,7 +43,7 @@ def field_normalize(*args: Feedable,
 @field_normalize.register(pa.RecordBatch)
 def _(*args: pa.RecordBatch,
         columns: Optional[List['str']] = None) -> List[pa.RecordBatch]:
-    pcolumns = pa_common_cols(self.accum)
+    pcolumns = pa_common_cols(args)
 
     if columns is None:
         columns = list(pcolumns)
@@ -56,6 +56,23 @@ def _(*args: pa.RecordBatch,
 
     return pa_keep_cols(columns,args)
 
+@field_normalize.register(np.ndarray)
+def _(*args: np.ndarray,
+        columns: Optional[List['str']] = None) -> List[np.ndarray]:
+
+    ndims = [i.ndim for i in args]
+    if len(set(ndims)) != 1:
+        raise ValueError("ndim must be the same for all batches")
+
+    ndim = ndims[0]
+
+    if ndim > 1:
+        ncols = [i.shape[1] for i in args]
+
+        if len(set(ncols)) != 1:
+            raise ValueError("all batches must have the same number of columns")
+
+    return args
 
 @singledispatch
 def join_batches(first: Feedable, *rest: List[Feedable],
@@ -65,20 +82,57 @@ def join_batches(first: Feedable, *rest: List[Feedable],
     return []
 
 @join_batches.register(pa.RecordBatch)
-def _(first: pa.RecordBatch, *rest: List[pa.RecordBatch],
+def _(first: pa.RecordBatch, *rest: pa.RecordBatch,
         until: Optional[int] = None) -> List[pa.RecordBatch]:
     to_join: List[pa.RecordBatch] = [first]
     cum_len: int = len(first)
 
+    rest = list(rest)
+
     while ((until is None) or (cum_len < until))\
             and (rest != []):
-
         to_join.append(rest.pop())
+        cum_len += len(to_join[-1])
 
     rebatched = pa.Table.\
                 from_batches(to_join).\
                 combine_chunks().\
                 to_batches()
+
+    return [*rebatched,*rest]
+
+@join_batches.register(np.ndarray)
+def _(first: np.ndarray, *rest: np.ndarray,
+        until: Optional[int] = None) -> List[np.ndarray]:
+    to_join: List[np.ndarray] = [first]
+    cum_len: int
+
+    rest = list(rest)
+
+    ndim = first.ndim
+
+    if ndim == 1:
+        cum_len = len(first)
+        while ((until is None) or (cum_len < until))\
+                and (rest != []):
+
+            to_join.append(rest.pop())
+
+            cum_len += len(to_join[-1])
+
+        rebatched = np.concatenate(to_join)
+
+    else:
+        cum_len = first.shape[1]
+
+        while ((until is None) or (cum_len < until))\
+                and (rest != []):
+
+            to_join.append(rest.pop())
+
+            cum_len += to_join[-1].shape[1]
+
+        rebatched = np.stack(to_join,axis=0)
 
     return [rebatched,*rest]
 
@@ -217,6 +271,17 @@ class FunBuffer:
 
         return batch
 
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        batch = self.advance()
+
+        if batch is None:
+            raise StopIteration
+
+        return batch
+
 
 def advance(buffer: FunBuffer, size: Optional[int] = None, cache: bool= True)\
     -> Tuple[Optional[pa.RecordBatch], List[pa.RecordBatch]]:
@@ -227,7 +292,7 @@ def advance(buffer: FunBuffer, size: Optional[int] = None, cache: bool= True)\
     if buf_len == 0:
         return None,[]
 
-    if buf_len < size and not buffer.exhausted:
+    if not size is None and buf_len < size and not buffer.exhausted:
         return None,buffer.buffer
 
     new = buffer.buffer.copy() #not optimal.
