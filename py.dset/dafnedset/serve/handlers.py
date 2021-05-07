@@ -17,7 +17,7 @@ from .base import DataServer
 
 from .._constants import BATCH_SIZE
 
-dataset_cache = {}
+dataset_cache = {} # type: ignore
 
 async def handle_cmd(cmd,writer,*args):
 

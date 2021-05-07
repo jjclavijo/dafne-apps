@@ -28,7 +28,6 @@ log = logging.getLogger(__name__)
 
 ### Decorator
 from typing import Callable, TypeVar, List, Union, NewType, Any
-from pyre_extensions import ListVariadic
 
 #Ts = TypeVar("Ts")
 RecordBatch = pa.lib.RecordBatch

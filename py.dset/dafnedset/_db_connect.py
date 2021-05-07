@@ -1,4 +1,4 @@
-import psycopg2 as pg2
+import psycopg2 as pg2 # type: ignore
 import os
 
 ENV_DEFAULTS= { 'DATOS':'/datos', 'SI_BASE':'sismoident','SI_USER':'postgres',
