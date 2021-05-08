@@ -174,8 +174,6 @@ def get_batch(
     raise TypeError("Type {} batches not implemented".format(type(first)))
 
 
-# def _(first: pa.RecordBatch, *rest: pa.RecordBatch,
-#        length: Optional[int] = None) -> Tuple[pa.RecordBatch, List[pa.RecordBatch]]:
 @get_batch.register(pa.RecordBatch)  # type: ignore[no-redef]
 def _(first, *rest, length: Optional[int] = None):
 
@@ -190,9 +188,6 @@ def _(first, *rest, length: Optional[int] = None):
     return first_a, [*first_b, *rest]
 
 
-# @get_batch.register(np.ndarray) # type: ignore[no-redef]
-# def _(first: np.ndarray, *rest: np.ndarray,
-#        length: Optional[int] = None) -> Tuple[np.ndarray, List[np.ndarray]]:
 @get_batch.register(np.ndarray)  # type: ignore[no-redef]
 def _(first, *rest, length: Optional[int] = None):
 
@@ -250,10 +245,6 @@ class FunBuffer(Generic[Feedable]):
                 raise ValueError("Unknown keyboard parameter: {}".format(i))
         self.__dict__.update(kwargs)
 
-        # if not "providers" in self.__dict__: self.providers = []
-
-        # if not "buffer" in self.__dict__: self.buffer = []
-
         if "providers" in self.__dict__ and not self.providers is None:
             size = len(self.providers)
         elif "streams" in self.__dict__ and not self.streams is None:
@@ -279,9 +270,6 @@ class FunBuffer(Generic[Feedable]):
                 if len(self.stream_last_valid) != size:
                     raise ValueError("stream_last_valid of unmatching length")
 
-        # if self.options.cache and\
-        #    not "cache" in self.__dict__: self.cache = []
-
         pass
 
     def get_new_next(self) -> Callable[[], Feedable]:
@@ -294,24 +282,10 @@ class FunBuffer(Generic[Feedable]):
             return None
 
         streams, iters = combine_streams(self.streams, new_streams)
-        # reveal_type(comb_streams)
 
         self.streams = streams
         self.iteration = [i + j for i, j in zip(self.iteration, iters)]
 
-        # if self.streams is None:
-        #    if None in new_streams:
-        #        raise ValueError('Impossible')
-        #    else:
-        #        self.streams = new_streams
-        #        return None
-
-        # for n,stream in enumerate(new_streams):
-        #    if stream is None:
-        #        continue
-        #    else:
-        #        self.streams[n] = stream
-        #        self.iteration[n] += 1
 
     def fill_buffer(self: "FunBuffer[Feedable]") -> None:
         """
@@ -322,34 +296,30 @@ class FunBuffer(Generic[Feedable]):
         """
         if self.streams is None:
             raise StopIteration
-        # stopcount = 0
         for ix, f in enumerate(self.streams):
             try:
                 self.stream_last_valid[ix] = True  # TODO: decorate streams
                 piece = f()
-                # print(f'advanced stream {ix}: {piece}')
                 # TODO: validate
                 if self.buffer is None:
                     self.buffer = [piece]
                 else:
                     self.buffer.append(piece)
             except StopIteration:
-                # stopcount += 1
-                # print(f'stream {ix} stopped')
                 self.stream_last_valid[ix] = False  # TODO: decorate streams
-                # also check types
+
         if not any(self.stream_last_valid):
             raise StopIteration
 
-        return  # stopcount #TODO: StopCount is redundant
+        return
 
     def advance(self: "FunBuffer[Feedable]", **kwargs) -> Optional[Feedable]:
         """
         Trys to draw a new batch
 
-        Buffer empty -> try to fill it, re-draw.
-        Fails? -> try to fill streams then buffer, re-draw
-        Fails? -> Set exhaust and trys to get last batch.
+        Buffer empty -> try to fill it.
+        Fails? -> try to fill streams then buffer
+        Fails? -> Set exhaust
         """
 
         size = kwargs.get("size", self.options.batch_size)
@@ -359,7 +329,6 @@ class FunBuffer(Generic[Feedable]):
         if batch is None:  # If buffer was not enough
             try:
                 self.fill_buffer()
-                return None
 
             except StopIteration:
                 try:
@@ -368,17 +337,8 @@ class FunBuffer(Generic[Feedable]):
 
                 except StopIteration:
                     self.exhausted = True
-                    # batch, buff = advance(self,size)
-                    # self.buffer = buff
-                    # return batch
 
-                return None
-
-                # batch, buff = advance(self,size)
-
-            # self.buffer = buff
-
-        if self.options.cache and not batch is None:
+        elif self.options.cache:
             if self.cache is None:
                 self.cache = [batch]
             else:
@@ -477,8 +437,6 @@ def fill_streams(buffer: FunBuffer[Feedable]) -> List[Optional[Callable[[], Feed
     can_reset = [i < buffer.options.niter for i in buffer.iteration]
 
     last_was_valid = buffer.stream_last_valid
-
-    # assert not buffer.streams is None
 
     size = len(buffer.providers)
     providers = buffer.providers
