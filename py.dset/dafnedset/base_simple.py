@@ -396,6 +396,16 @@ class FunBuffer(Generic[Feedable]):
                 options=options, providers=[*self.providers, *other.providers]
             )
 
+    def map(
+        self: "FunBuffer[Feedable]", transformation: "Callable[[Feedable],Feedable]"
+    ) -> "FunBuffer[Feedable]":
+        new_providers = [map(transformation,i) for i in self.providers]
+        options = FunBufferOptions(**self.options.__dict__)
+
+        return FunBuffer(
+                options=options, providers=new_providers
+                )
+
     # def __>>__ add preprocessing
 
 

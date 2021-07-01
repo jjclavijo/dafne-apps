@@ -17,16 +17,18 @@ services:
     environment:
       POSTGRES_PASSWORD: "docker"
 
-  notebook:
-    image: docker.io/jupyter/base-notebook
+  interface:
+    image: dafnedset:save
 #    build: ./data_feeder
     volumes:
-      - .:/opt/dafnepy
-      - ./notebooks:/home/jovyan/work
+#      - $DAFNE_HOME/cache:/cache
+      - ../../raw/cache:/cache
+#      - $DAFNE_HOME/sockets:/sockets
+      - ../../raw/sockets:/sockets
+      - ./datos:/datos
+      - ./dafnedset/presets:/opt/venv/lib/python3.8/site-packages/dafnedset/presets
     networks:
       - backend
-    ports:
-      - "127.0.0.1:8888:8888" # Expose port for Debug purposes
     depends_on:
       - db
     links:
@@ -44,7 +46,8 @@ services:
       SI_USER: "postgres"
       SI_PASS: "docker"
       SI_BASE: "sismoident"
-    command: jupyter-lab
+      LOCAL_USER_ID: "${LOCAL_USER_ID:-1000}"
+    command: dafne_dataserver 
 
 networks:
   backend:
