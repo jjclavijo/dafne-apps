@@ -83,6 +83,8 @@ convertMany xs = EvtPtsGeo [ GeoJsonFeature {geometry=Just (convert1 x),
                                              properties=Nothing} |
                              x <- xs ]
 
+Convert step to svg properties of arrow
+
 stepToProps :: Posicion -> Maybe GjProperties
 stepToProps (Coordinate (Just e),Coordinate (Just n),Coordinate (Just u)) = Just GjProperties {anchor_x = 20 * mag e n, anchor_y = 20 * mag e n,
                   html = Symbols.svgArrow (mag e n)
@@ -123,6 +125,7 @@ predictAndMap ev dist eps = do
   (series, pts) <- Q.evDataAndSeries ev dist eps
   steps <- runPredictionSteps series 
   return (mergeAll pts steps)
+
 --                 mergeAll =<< <$> Q.evDataAndSeries evento distancia dias) $ runPredictionSteps =<< (fst <$> Q.evDataAndSeries evento distancia dias)
 
 --main :: IO ()
