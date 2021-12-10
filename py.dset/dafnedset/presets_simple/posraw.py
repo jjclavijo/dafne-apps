@@ -6,8 +6,14 @@ A pre-set for positive samples
 
 """
 
-from ..datasets import DefaultQuerys
+from .. import datasets_simple as defaultQuerys
+from .. import fun_ops as fop
 
-source = DefaultQuerys.positive().label(label=[1.,0.]).scale()
+from .. import fun_transformations as ftr
 
-data = source.feed(batch_size=source.length,max_length=source.length,force=True)
+raw = fop.read_db(defaultQuerys.CASES)
+
+raw = fop.map(raw,ftr.label_batch([1.,0.]))
+
+data = fop.map(raw,ftr.scale())
+

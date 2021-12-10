@@ -8,17 +8,24 @@ A preset for negative samples
 
 """
 
-from ..datasets import DefaultQuerys
-from ..transformations import BatchProcessing
 
-raw = DefaultQuerys.negative().label(label=[0.,1.]).scale()
 
-parts = raw.split([0.7,0.15,0.145,0.005]).cache() # Train, Test, Val, show
+from .. import datasets_simple as defaultQuerys
+from .. import fun_ops as fop
+
+from .. import fun_transformations as ftr
+
+raw = fop.read_db(defaultQuerys.NO_CASES)
+
+raw = fop.map(raw,ftr.label_batch([0.,1.]))
+
+# Tremendo side efect!
+raw.options.batch_size = 200
+
+parts = fop.split(raw,[0.7,0.15,0.145,0.005]) # Train, Test, Val, show
 
 # nr of nan    0     1     2     3     4     5     6     7     8     9
 nan_dist = [5726,  524,  185,  117,   86,   71,   40,   44,   22,   12]
-drop = BatchProcessing.dropper(distribution=nan_dist)
+drop = ftr.drop_epochs(distribution=nan_dist)
 
-source = parts[0].preprocess(mix=drop)
-
-data = source.feed(batch_size=source.length,max_length=source.length,force=True)
+data = fop.map(parts[0],drop)

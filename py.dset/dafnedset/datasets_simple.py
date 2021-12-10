@@ -1,8 +1,11 @@
 import os
 
 import pyarrow as pa
+import pyarrow.parquet as pq
 
-from .base import CachedSaver,CachedLoader,Cacher
+#from .base import CachedSaver,CachedLoader,Cacher
+from .base_simple import FunBuffer,FunBufferOptions
+from . import fun_ops as fop
 #NOPQ: from ._constants import DATOS_PATH
 
 from typing import Dict
@@ -58,15 +61,16 @@ CASES: Query = { 'size': "SELECT max(iid) FROM indice_c;",
              'columns': '\t'.join(['est','iid','ep','t','norte','este','altura'])
           }
 
-class DefaultQuerys(CachedSaver,CachedLoader):
+
+class DefaultQuerys(FunBuffer):
     @classmethod
     def positive(cls,**kwargs):
-        this = super().read_db(CASES,**kwargs) #NOPQ
+        this = fop.read_db(CASES,**kwargs) #NOPQ
         return this
 
     @classmethod
     def negative(cls,**kwargs):
-        this = super().read_db(NO_CASES,**kwargs) #NOPQ
+        this = fop.read_db(NO_CASES,**kwargs) #NOPQ
         return this
 
     @classmethod
@@ -76,11 +80,12 @@ class DefaultQuerys(CachedSaver,CachedLoader):
 
     @classmethod
     def fake(cls,generator,size,batch):
-        this = Cacher(synth_yielder(generator,size,batch))
+        this = cls(providers=[synth_yielder(generator,size,batch)],
+                       options=FunBufferOptions(batch_size=batch))
         return this
 
-    def write_parquet(self):
-        pass
+    def write_parquet(self,name):
+        fop.write_parquet(self,name)
 
 from typing import Callable,List,Tuple, Generator, Iterable
 
@@ -112,4 +117,3 @@ def synth_yielder(generator: Callable[[],Tuple[List[float],List[float],List[floa
         cumsize += batch
 
     yield genbatch(size-cumsize)
-

@@ -48,6 +48,9 @@ class FunSplitter:
         ixes = [ix[ ( sorting >= i) & ( sorting < j) ] \
                 for i,j in zip(cumsplits,cumsplits[1:]) ]
 
+        #DEBUG
+        #self.ixes = ixes
+
         # Split things up
         data_pd = data.to_pandas()
         splits = [pa.RecordBatch.from_pandas(s,preserve_index=False) \
@@ -66,6 +69,15 @@ class FunSplitter:
         options = bs.FunBufferOptions(**self.source.options.__dict__)
 
         return bs.FunBuffer(options=options, providers=[FunPart(self,index)])
+
+    def __mul__(self,other):
+
+        pps = []
+        for i in range(len(self.splits)):
+            pps.append(self[i] * other)
+
+        return pps
+
 
 class FunPart:
     def __init__(self:"FunPart",source:FunSplitter,index:int):

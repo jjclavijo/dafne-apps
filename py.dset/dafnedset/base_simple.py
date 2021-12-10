@@ -201,7 +201,7 @@ def _(first, *rest, length: Optional[int] = None):
 
     return first_a, [*first_b, *rest]
 
-
+#TODO: Al sumar normalizar las niter de alguna manera.
 class FunBufferOptions:
     force: bool = True
     max_length: Optional[bool] = None
@@ -209,6 +209,7 @@ class FunBufferOptions:
     batch_size: Optional[int] = None
     columns: Optional[List[str]] = None
     cache: bool = True
+    repeat: bool = False
 
     def __init__(self, **kwargs) -> None:
         """
@@ -238,6 +239,7 @@ class FunBuffer(Generic[Feedable]):
         Basic init stores all kw argumens into object dict (like a struct)
         Then, check mandatory conditions and set needed parameters to defaults
         """
+        # TODO: probablemente pedir options
         size: Optional[int]
 
         for i, j in kwargs.items():
@@ -358,6 +360,9 @@ class FunBuffer(Generic[Feedable]):
             if was_exhausted:  # and streams were already exhausted
                 # if self.exhausted changed to True we must not Stop,
                 # there can be a remainder in the buffer
+                if self.options.repeat:
+                    self.iteration = [0] * len(self.iteration)
+                    self.exhausted = False
                 raise StopIteration  # means there is nothing to return
             else:  # If streams were not exhausted we must try again.
                 return self.__next__()

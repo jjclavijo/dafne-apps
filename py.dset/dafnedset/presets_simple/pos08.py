@@ -10,7 +10,13 @@ This showld probably be gone.
 
 from .pos10 import parts
 
-parts = parts.label(label=[0.8,0.2])
-source = parts[0]
+from .. import fun_ops as fop
 
-data = source.feed(batch_size=source.length,max_length=source.length,force=True)
+from .. import fun_transformations as ftr
+
+parts = parts * 1
+
+for i in range(len(parts)):
+    parts[i] = fop.map(parts[i],ftr.label_batch([0.8,0.2]))
+
+data = parts[0]

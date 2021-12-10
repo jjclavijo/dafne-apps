@@ -20,7 +20,7 @@ NAMES_DIRS_MAP = {
     'test_pos_n':('test_e_ds',100000),
     'show_tot':('show',100000)}
 
-def build_cache(named_dirs_map=NAMES_DIRS_MAP):
+def build_cache(names_dirs_map=NAMES_DIRS_MAP):
     """
     Build the dataset cache from a dictionary of names and save paths
     """
