@@ -4,6 +4,7 @@ import AppEnv (defaultConn)
 import qualified QuerySiDB as Qdb
 import qualified QueryFiles as Qf
 import Types
+import TenvParser (pTime)
 
 -- import Control.Concurrent.Async
 
@@ -102,4 +103,28 @@ evDataAndSeries evento distancia dias = do
 -- TODO: We repeat Querys a Lot, 
 -- Template Haskell could do it just like $(allquerys q1 q2 q3) or something?
 
+joinChunkData :: [PtSeries] -> ChunkSeries
+joinChunkData series = (\(t,p,d) -> ChunkSeries t p d) $ unpack series
+  where unpack (x:xs) = ( inicio x, map name (x:xs), map datos (x:xs))
 
+stChunkF :: Estacion -> String -> TenvTime -> Integer -> IO PtSeries
+stChunkF estacion desde tiempo dias = do
+  rows <- Qf.readPointFileFDays estacion desde tiempo dias
+  return (PtSeries estacion tiempo (Qf.getCoords rows) )
+
+chunkListF :: ChunkProps -> Integer -> IO [PtSeries]
+chunkListF props dias = do
+  conn <- defaultConn
+  --props <- Qdb.eventProps conn evento
+  pts <- Qdb.chunkPointsPos conn props
+  -- let Just day = Qdb.evtday props
+-- serie :: EvtPtPos -> IO PtSeries
+  let serie pt = stChunkF (Qdb.estacion pt) (Qdb.inicio pt) (pTime . Qdb.inicio $ pt) dias
+  series <- mapM serie pts
+  return series
+
+chunkSeriesF :: ChunkProps -> IO ChunkSeries
+chunkSeriesF propiedades = do
+  chunkList <- chunkListF propiedades (chunkLargo propiedades)
+  let chunks = joinChunkData chunkList
+  return chunks

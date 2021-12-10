@@ -2,7 +2,7 @@
 {-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE DuplicateRecordFields #-}
 
-module QuerySiDB (eventProps, eventPointsPos, EvtPtPos(..),evtday, Event(..)) where
+module QuerySiDB (eventProps, eventPointsPos, chunkPointsPos, EvtPtPos(..),evtday, Event(..)) where
 
 import Database.PostgreSQL.Simple
 import Database.PostgreSQL.Simple.Time (LocalTimestamp, Unbounded(Finite))
@@ -11,8 +11,10 @@ import Database.PostgreSQL.Simple.FromRow (fromRow, field)
 import Database.PostgreSQL.Simple.SqlQQ
 
 import Data.Time --(localDay, TimeOfDay, LocalTime)
+import Control.Monad (liftM)
 
 import AppEnv (defaultConn)
+import Types (ChunkProps(..))
 
 {- 
 Query event propertyes.
@@ -142,11 +144,40 @@ q_pts_pos =
          JOIN (SELECT id as estacion, geom::geometry FROM http_estaciones) tablaB
          ON tablaB.estacion = tablaA.estacion
          ORDER BY tablaA.estacion |]
+
+--
+--
+q_pts_props :: Query
+q_pts_props =
+   [sql| SELECT tablaA.estacion,tablaA.inicio,tablaA.fin, 
+                st_x(tablaB.geom) long, st_y(tablaB.geom) lat
+         FROM (SELECT estacion, to_char(min(lower(tiempo)),'YYMONDD') inicio,
+               to_char(max(upper(tiempo)),'YYMONDD') fin
+               FROM (SELECT h.estacion, tsrange(t.ini::timestamp, date_trunc('day',now())::timestamp ) * h.rango as tiempo 
+                     FROM   http_estaciones e
+                     JOIN   ( VALUES (?,?) ) AS t(id, ini)
+         	           ON     e.id = t.id
+                     JOIN   http_tiempos h ON e.id = h.estacion
+                     WHERE  tsrange(t.ini::timestamp, date_trunc('day',now())::timestamp ) * h.rango != 'empty') a
+               GROUP BY estacion
+               ORDER BY sum(upper(tiempo) - lower(tiempo)) DESC 
+               ) tablaA
+         JOIN (SELECT id as estacion, geom::geometry FROM http_estaciones) tablaB
+         ON tablaB.estacion = tablaA.estacion
+         ORDER BY tablaA.estacion |]
             
+propsToTuple :: ChunkProps -> [(String,LocalTimestamp)]
+propsToTuple props = zip (chunkEstaciones props) (repeat (getTs props))
+  where getTs p = Finite $ LocalTime (chunkTiempo p) (dayFractionToTimeOfDay 0)
 
 eventPointsPos :: (Real a) => Connection -> Event -> a -> IO [EvtPtPos]
 eventPointsPos conn ev dist = do
   ests <- query conn q_pts_pos $ evt_parms ev dist
+  return ests
+
+chunkPointsPos :: Connection -> ChunkProps -> IO [EvtPtPos]
+chunkPointsPos conn props = do
+  ests <- mapM  ((liftM head) . (query conn q_pts_props) )  $ propsToTuple props
   return ests
 
 -- Helpers

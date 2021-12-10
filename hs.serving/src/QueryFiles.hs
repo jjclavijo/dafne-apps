@@ -103,19 +103,52 @@ readPoint time days lines = readAllPoint $ map (fst . fst) $ gettimes ( (Nothing
 readPointFile :: Estacion -> TenvTime -> Integer -> IO [Maybe TenvRow]
 -- Read Tenv file line by line, posibbly check something
 readPointFile estacion time days = do
+  -- read data file (xz Compressed)
   let file = "./data/" ++ estacion ++ ".IGS14.tenv3.xz"
   text <- readXzFile file
   let l = (readPoint time days) text
   return (l)
 
 readPointFileF :: Estacion -> String -> TenvTime -> Integer -> IO [Maybe TenvRow]
--- Read Tenv file line by line, posibbly check something
+-- Read Tenv file line by line, posibbly check something  Pre-Filtered Version
 readPointFileF estacion inicio time days = do
+    -- read xz compressed File
     let file = "./data/" ++ estacion ++ ".IGS14.tenv3.xz"
     text <- readXzFile file
+    -- read file line by line
     let l = ((readPoint time days) . (filter inicio)) text
     return (l)
   where filter :: String -> [String] -> [String]
+        -- Drop lines until Date is matched
+        -- Them return 70 lines
         filter st ls = (take 70) . (dropWhile (dateis st)) $ ls
+        -- check if date is not matched
         dateis :: String -> String -> Bool
         dateis st t = ( ((take 7) . (drop 5)) t) /= st
+
+
+-- Ndays Versions
+--
+--
+
+readPointFileFDays :: Estacion -> String -> TenvTime -> Integer -> IO [Maybe TenvRow]
+-- Read Tenv file line by line, posibbly check something  Pre-Filtered Version
+readPointFileFDays estacion inicio time days = do
+    -- read xz compressed File
+    let file = "./data/" ++ estacion ++ ".IGS14.tenv3.xz"
+    text <- readXzFile file
+    -- read file line by line
+    let l = ((readPointDays time days) . (filter inicio)) text
+    return (l)
+  where filter :: String -> [String] -> [String]
+        -- Drop lines until Date is matched
+        -- Them return days + 10 lines
+        filter st ls = (take . fromInteger $ (days + 10 )) . (dropWhile (dateis st)) $ ls
+        -- check if date is not matched
+        dateis :: String -> String -> Bool
+        dateis st t = ( ((take 7) . (drop 5)) t) /= st
+
+readPointDays :: TenvTime -> Integer -> [TenvLine] -> [Maybe TenvRow]
+readPointDays time days lines = readAllPoint $ map (fst . fst) $ gettimes ( (Nothing,lines), [ addDays x time | x <- [0..days] ] )
+  where gettimes (tuple,d:days) =  (dateAndRest tuple d,days) : (gettimes (dateAndRest tuple d,days))  -- Parse Lines, crop only ndays Around Evt. Fixed to 30-1-30 by now.
+        gettimes (tuple,[]) = []

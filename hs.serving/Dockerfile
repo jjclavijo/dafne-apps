@@ -17,12 +17,13 @@ FROM docker.io/debian:buster-slim as app
 RUN mkdir -p /opt/app
 WORKDIR /opt/app
 
+COPY --from=data-image /data/http-nevada /opt/app/data
+
 # Install lib gmp
 COPY --from=build /tmp/libgmp.deb /tmp
 RUN dpkg -i /tmp/libgmp.deb && rm /tmp/libgmp.deb
 
 COPY --from=build /opt/build/bin .
-COPY --from=data-image /data/http-nevada /opt/app/data
 
 COPY www ./www
 

@@ -37,6 +37,7 @@ type API = "get_event" :> Capture "event" Integer :> Capture "dist" Double :> Ca
       :<|> "predict" :> Capture "event" Integer :> Capture "dist" Double :> Get '[JSON] (Maybe EvPreds)
       :<|> "predictSteps" :> Capture "event" Integer :> Capture "dist" Double :> Get '[JSON] (Maybe EvSteps)
       :<|> "map" :> Capture "event" Integer :> Capture "dist" Double :> Get '[JSON] (Maybe P.EvtPtsGeo)
+      :<|> "get_chunk" :> ReqBody '[JSON] T.ChunkProps :> Post '[JSON] T.ChunkSeries
 
 api :: Proxy API
 api = Proxy
@@ -46,10 +47,13 @@ server = getEvent
     :<|> predict
     :<|> predictSteps
     :<|> map
+    :<|> getChunk
         where getEvent a b c = liftIO $ evSeriesF a b c
               predict ev dist = liftIO $ runPrediction =<< evSeriesF ev dist 30
               predictSteps ev dist = liftIO $ runPredictionSteps =<< evSeriesF ev dist 30
               map ev dist = liftIO $ P.predictAndMap ev dist 30
+              getChunk a = liftIO $ chunkSeriesF a
+
 
 -- TODO: 30 hardcoded, must be somewhere in "clients"
 

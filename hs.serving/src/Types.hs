@@ -5,7 +5,8 @@
 module Types (CoordinateSeries,Estacion,TenvTime,TenvTimeMJD
               , EvtTime, Coordinate(..), Este, Norte
               , Altura, Posicion, Long, TenvLine
-              , TenvRow(..), PtSeries(..), EvSeries(..)) where
+              , TenvRow(..), PtSeries(..), EvSeries(..)
+              , ChunkSeries(..), ChunkProps(..)) where
 
 import Data.Time
 import GHC.Generics
@@ -51,6 +52,20 @@ data EvSeries = EvSeries { --evento :: Evento,
                          }
   deriving (Show, Generic)
 
+data ChunkSeries = ChunkSeries { --evento :: Evento,
+                           chunkIni :: TenvTime,
+                           chunkPts :: [Estacion],
+                           chunkCoords :: [CoordinateSeries]
+                         }
+  deriving (Show, Generic)
+
+data ChunkProps = ChunkProps { chunkEstaciones :: [String],
+                               chunkTiempo :: Day,
+                               chunkLargo :: Integer
+                             }
+  deriving (Show, Generic)
+                                
+
 instance ToJSON Coordinate where
   toJSON (Coordinate r) = case r of
                Nothing -> String "NaN"
@@ -82,5 +97,11 @@ instance FromJSON Coordinate where
 
 instance ToJSON PtSeries
 instance ToJSON EvSeries
+instance ToJSON ChunkProps
+instance ToJSON ChunkSeries
+
 instance FromJSON PtSeries
 instance FromJSON EvSeries
+instance FromJSON ChunkProps
+instance FromJSON ChunkSeries
+
