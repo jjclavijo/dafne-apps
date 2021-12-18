@@ -1,4 +1,4 @@
-from functools import singledispatch, singledispatchmethod
+from functools import singledispatch
 from itertools import repeat
 from collections.abc import Iterable
 
@@ -274,8 +274,18 @@ class FunBuffer(Generic[Feedable]):
 
         pass
 
+    def get_new_iterable(self):# -> Callable[[], Feedable]:
+        new_providers = []
+        for p in self.providers:
+            if isinstance(p, FunBuffer):
+                new_providers.append( p.get_new_iterable() )
+            else:
+                new_providers.append( p )
+
+        return FunBuffer(options = self.options, providers= new_providers)
+
     def get_new_next(self) -> Callable[[], Feedable]:
-        pass
+        return self.get_new_iterable().__next__
 
     def fill_streams(self: "FunBuffer[Feedable]") -> None:
 
@@ -314,6 +324,44 @@ class FunBuffer(Generic[Feedable]):
             raise StopIteration
 
         return
+
+
+    def _get_schema(self: "FunBuffer[Feedable]") -> pa.Schema:
+        """
+        toma el esquema de los batches, puede modificar el buffer, pero
+        no debería modificar el comportamiento del iterador.
+        """
+
+        buf_len: int = (
+            sum([len(i) for i in self.buffer]) if not self.buffer is None else 0
+        )
+        cache_len: int = (
+            sum([len(i) for i in self.cache]) if not self.cache is None else 0
+        )
+
+        if buf_len != 0:
+            return self.buffer[0].schema
+        elif cache_len != 0:
+            return self.cache[0].schema
+        else:
+            # Solo si no queda otra opción se intenta avanzar el buffer
+            # Para obtener el esquema de los datos.
+            try:
+                self.fill_buffer()
+
+                return self.buffer[0].schema
+
+            except StopIteration:
+                try:
+                    self.fill_streams()
+                    self.fill_buffer()
+
+                    return self.buffer[0].schema
+
+                except StopIteration:
+                    self.exhausted = True
+
+                    return None
 
     def advance(self: "FunBuffer[Feedable]", **kwargs) -> Optional[Feedable]:
         """
@@ -396,9 +444,25 @@ class FunBuffer(Generic[Feedable]):
         elif not isinstance(self.providers[-1], other.providers[-1].__class__):
             return NotImplemented
         else:
+          if self.options.niter == other.options.niter:
             options = FunBufferOptions(**self.options.__dict__)
             return FunBuffer(
                 options=options, providers=[*self.providers, *other.providers]
+            )
+          else:
+            options = FunBufferOptions(**self.options.__dict__)
+            options.niter = 1
+            tmp1 = self
+            tmp2 = other
+
+            if tmp1.options.niter != 1:
+                tmp1 = FunBuffer(options=options, providers=[tmp1])
+
+            if tmp2.options.niter != 1:
+                tmp2 = FunBuffer(options=options, providers=[tmp2])
+
+            return FunBuffer(
+                options=options, providers=[tmp1, tmp2]
             )
 
     def map(

@@ -8,8 +8,6 @@ A preset for negative samples
 
 """
 
-
-
 from .. import datasets_simple as defaultQuerys
 from .. import fun_ops as fop
 
@@ -18,6 +16,7 @@ from .. import fun_transformations as ftr
 raw = fop.read_db(defaultQuerys.NO_CASES)
 
 raw = fop.map(raw,ftr.label_batch([0.,1.]))
+raw = fop.map(raw,ftr.scale())
 
 # Tremendo side efect!
 raw.options.batch_size = 200

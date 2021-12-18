@@ -14,6 +14,7 @@ from .. import fun_transformations as ftr
 raw = fop.read_db(defaultQuerys.CASES)
 
 raw = fop.map(raw,ftr.label_batch([1.,0.]))
+raw = fop.map(raw,ftr.scale())
 
 # Tremendo side efect!
 raw.options.batch_size = 200

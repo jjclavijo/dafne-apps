@@ -17,6 +17,8 @@ def gen_sample():
     u = np.random.rand(61) * 1e-3
     return (e,n,u)
 
-source = DefaultQuerys.fake(gen_sample,1000,100).label(label=[0.,1.]).scale()
+raw = DefaultQuerys.fake(gen_sample,1000,100)
 
-data = source.feed(batch_size=source.length,max_length=source.length,force=True)
+raw = fop.map(raw,ftr.label_batch([1.,0.]))
+data = fop.map(raw,ftr.scale())
+

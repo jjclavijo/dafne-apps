@@ -36,8 +36,8 @@ RecordBatch = pa.lib.RecordBatch
 #    return rb
 
 def apply_pd_args(
-        f: Callable[[pd.DataFrame,...], pd.DataFrame]
-      ) -> Callable[[...], Callable[[RecordBatch], RecordBatch]]:
+        f: "Callable[[pd.DataFrame,...], pd.DataFrame]"
+      ) -> "Callable[[...], Callable[[RecordBatch], RecordBatch]]":
     def inner(*args: ...) -> Callable[[RecordBatch], RecordBatch]:
 
         def innner( batch: RecordBatch ) -> RecordBatch:
@@ -50,8 +50,8 @@ def apply_pd_args(
     return inner
 
 def apply_args(
-        f: Callable[[RecordBatch,...], RecordBatch]
-      ) -> Callable[[...], Callable[[RecordBatch], RecordBatch]]:
+        f: "Callable[[RecordBatch,...], RecordBatch]"
+      ) -> "Callable[[...], Callable[[RecordBatch], RecordBatch]]":
     def inner(*args: ..., **kwargs: ...) -> Callable[[RecordBatch], RecordBatch]:
 
         def innner( batch: RecordBatch ) -> RecordBatch:
