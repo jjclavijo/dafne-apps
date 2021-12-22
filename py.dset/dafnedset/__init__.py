@@ -18,5 +18,5 @@ transformations.py. See presets for examples.
 __version__ = "0.0.1"
 
 if __name__ == '__main__':
-    from . import presets as ps
+    from . import presets_simple as ps
     print("Presets Imported")

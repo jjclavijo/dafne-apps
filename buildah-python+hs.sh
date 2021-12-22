@@ -28,8 +28,10 @@ buildah run $CONT /opt/venv/bin/python -m pip install -U pip wheel
 buildah run $CONT /opt/venv/bin/python -m pip install tensorflow tfx_bsl jupyterlab flit
 
 cp -r py.dset $MPOINT/opt/
+cp -r py.arena $MPOINT/opt/
 
 buildah run $CONT sh -c 'cd /opt/py.dset ;env FLIT_ROOT_INSTALL=1 /opt/venv/bin/python -m flit install -s'
+buildah run $CONT sh -c 'cd /opt/py.arena ;env FLIT_ROOT_INSTALL=1 /opt/venv/bin/python -m flit install -s'
 
 CONT2=$(buildah from dafnepython)
 MPOINT2=$(buildah mount $CONT2)

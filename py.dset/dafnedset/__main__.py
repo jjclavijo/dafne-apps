@@ -15,7 +15,7 @@ transformations.py. See presets for examples.
 """
 
 if __name__ == '__main__':
-    from . import presets as ps
+    from . import presets_simple as ps
     print("Presets Imported")
 
     for i in ps.pos10.data:
