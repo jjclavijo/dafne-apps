@@ -13,12 +13,11 @@ def dafneFbToTf(p: FunBuffer) -> Dataset:
 
     #p = neg10.parts[0] + pos10.parts[0]
 
-    adp = tfAdapter(p._get_schema())
-
     p.options.batch_size = PRACTICAMENTE_IFTO
 
     for ix,i in enumerate(p):
-        print(ix)
+        # Como lo vamos a Iterar, le tomamos el schema de ahí
+        adp = tfAdapter(i.schema)
         data = adp.ToBatchTensors(i)
 
     transformer = lambda d: (stack((d['norte'],d['este'],d['altura']),axis=-1),d['etiqueta'])

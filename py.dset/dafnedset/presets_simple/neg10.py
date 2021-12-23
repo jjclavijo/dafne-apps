@@ -28,3 +28,5 @@ nan_dist = [5726,  524,  185,  117,   86,   71,   40,   44,   22,   12]
 drop = ftr.drop_epochs(distribution=nan_dist)
 
 data = fop.map(parts[0],drop)
+
+data = fop.map( data,ftr.scale() )

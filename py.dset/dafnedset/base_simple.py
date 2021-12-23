@@ -441,8 +441,8 @@ class FunBuffer(Generic[Feedable]):
 
         if self.providers is None or other.providers is None:
             return NotImplemented
-        elif not isinstance(self.providers[-1], other.providers[-1].__class__):
-            return NotImplemented
+        #elif not isinstance(self.providers[-1], other.providers[-1].__class__):
+        #    return NotImplemented
         else:
           if self.options.niter == other.options.niter:
             options = FunBufferOptions(**self.options.__dict__)
